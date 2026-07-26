@@ -28,6 +28,21 @@ const EMPTY = {
   contact_name: '', email: '', phone: '', address: '', gstin: '',
 }
 
+// Mirrors backend limits in core/storage/validation.py (validate_branding_upload)
+const MAX_BRANDING_BYTES = 2 * 1024 * 1024
+const ALLOWED_BRANDING_EXT = ['.png', '.jpg', '.jpeg', '.ico']
+
+function validateBrandingFile(file) {
+  if (file.size > MAX_BRANDING_BYTES) {
+    return `File too large. Maximum size is ${MAX_BRANDING_BYTES / (1024 * 1024)} MB.`
+  }
+  const ext = `.${file.name.split('.').pop().toLowerCase()}`
+  if (!ALLOWED_BRANDING_EXT.includes(ext)) {
+    return 'Unsupported file type. Allowed: png, jpg, jpeg, ico.'
+  }
+  return null
+}
+
 // ─── field wrapper ─────────────────────────────────────────────────────────────
 function Field({ label, required, hint, children }) {
   return (
@@ -44,15 +59,16 @@ function Field({ label, required, hint, children }) {
 const inp = 'w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm dark:text-white outline-none transition focus:border-blue-500 dark:focus:border-blue-500 focus:bg-white dark:focus:bg-slate-950/50'
 
 // ─── file upload widget ────────────────────────────────────────────────────────
-function FileUpload({ label, hint, file, onChange, accept = 'image/*' }) {
+function FileUpload({ label, hint, file, onChange, accept = '.png,.jpg,.jpeg,.ico', error }) {
   const preview = file ? URL.createObjectURL(file) : null
   return (
     <div>
       <p className="mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
       <label className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-center cursor-pointer transition ${
-        file ? 'border-blue-300 dark:border-blue-500/50 bg-blue-50 dark:bg-blue-500/10' : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-slate-800'
+        error ? 'border-rose-300 dark:border-rose-500/50 bg-rose-50 dark:bg-rose-500/10'
+        : file ? 'border-blue-300 dark:border-blue-500/50 bg-blue-50 dark:bg-blue-500/10' : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-100 dark:hover:bg-slate-800'
       }`}>
-        <input type="file" accept={accept} className="sr-only" onChange={e => onChange(e.target.files?.[0] ?? null)} />
+        <input type="file" accept={accept} className="sr-only" onChange={e => { onChange(e.target.files?.[0] ?? null); e.target.value = '' }} />
         {preview ? (
           <div className="relative">
             <img src={preview} alt={label} className="mx-auto max-h-16 max-w-full rounded-lg object-contain" />
@@ -72,7 +88,8 @@ function FileUpload({ label, hint, file, onChange, accept = 'image/*' }) {
         )}
       </label>
       {hint && <p className="mt-1 text-[11px] text-slate-400">{hint}</p>}
-      {file && <p className="mt-1 text-[11px] text-emerald-600 truncate">{file.name}</p>}
+      {file && !error && <p className="mt-1 text-[11px] text-emerald-600 truncate">{file.name}</p>}
+      {error && <p className="mt-1 text-[11px] text-rose-500">{error}</p>}
     </div>
   )
 }
@@ -180,8 +197,16 @@ function StepModules({ data, set, modules, loading }) {
   )
 }
 
-function StepBranding({ data, set }) {
+function StepBranding({ data, set, fileErrors, setFileError }) {
   const PRESETS = [PURPLE,'#C82909','#059669','#7c3aed','#0891b2','#d97706','#374151','#000000']
+
+  const handleFile = (key, f) => {
+    if (!f) { set(key, null); setFileError(key, null); return }
+    const err = validateBrandingFile(f)
+    setFileError(key, err)
+    set(key, err ? null : f)
+  }
+
   return (
     <div className="space-y-6">
       <div><h2 className="text-xl font-bold text-slate-900 dark:text-white">Brand Identity</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Logos and primary colour for the tenant's portal.</p></div>
@@ -190,21 +215,24 @@ function StepBranding({ data, set }) {
       <div className="grid grid-cols-3 gap-4">
         <FileUpload
           label="Light Logo"
-          hint="Used on dark backgrounds"
+          hint="Used on dark backgrounds · PNG, JPG or ICO, max 2 MB"
           file={data.logo_file}
-          onChange={f => set('logo_file', f)}
+          error={fileErrors.logo_file}
+          onChange={f => handleFile('logo_file', f)}
         />
         <FileUpload
           label="Dark Logo"
-          hint="Used on light backgrounds"
+          hint="Used on light backgrounds · PNG, JPG or ICO, max 2 MB"
           file={data.dark_logo_file}
-          onChange={f => set('dark_logo_file', f)}
+          error={fileErrors.dark_logo_file}
+          onChange={f => handleFile('dark_logo_file', f)}
         />
         <FileUpload
           label="Favicon"
-          hint="Square, min 32×32 px"
+          hint="Square, min 32×32 px · max 2 MB"
           file={data.favicon_file}
-          onChange={f => set('favicon_file', f)}
+          error={fileErrors.favicon_file}
+          onChange={f => handleFile('favicon_file', f)}
         />
       </div>
 
@@ -334,6 +362,8 @@ export default function TenantCreate() {
   const [loadingModules, setLoadingModules] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState('')
+  const [fileErrors, setFileErrors] = useState({})
+  const setFileError = (key, msg) => setFileErrors(f => ({ ...f, [key]: msg }))
 
   useEffect(() => {
     setLoadingPlans(true)
@@ -346,6 +376,7 @@ export default function TenantCreate() {
 
   const canNext = () => {
     if (step === 1) return data.name.trim() && data.subdomain.trim()
+    if (step === 4) return !Object.values(fileErrors).some(Boolean)
     if (step === 5) return data.contact_name && data.email && data.phone && data.address && data.gstin.length === 15
     return true
   }
@@ -461,7 +492,7 @@ export default function TenantCreate() {
             {step === 1 && <StepBasicInfo data={data} set={set} />}
             {step === 2 && <StepSubscription data={data} set={set} plans={plans} loading={loadingPlans} />}
             {step === 3 && <StepModules data={data} set={set} modules={modules} loading={loadingModules} />}
-            {step === 4 && <StepBranding data={data} set={set} />}
+            {step === 4 && <StepBranding data={data} set={set} fileErrors={fileErrors} setFileError={setFileError} />}
             {step === 5 && <StepOrganization data={data} set={set} />}
             {step === 6 && <StepReview data={data} />}
           </div>
