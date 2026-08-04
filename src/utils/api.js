@@ -157,6 +157,11 @@ export const fetchTenantBranding  = (tenantId) => api.get(`/tenants/branding/?te
 export const createTenantBranding = (fd) => brandingUpload('POST',  '/tenants/branding/',      fd)
 export const updateTenantBranding = (id, fd) => brandingUpload('PATCH', `/tenants/branding/${id}/`, fd)
 
+// ── Tenant Invoice Settings (bank details, UPI QR, terms & conditions) ────────
+export const fetchTenantInvoiceSettings  = (tenantId) => api.get(`/tenants/invoice-settings/?tenant=${tenantId}`)
+export const createTenantInvoiceSettings = (fd)       => brandingUpload('POST',  '/tenants/invoice-settings/',      fd)
+export const updateTenantInvoiceSettings = (id, fd)   => brandingUpload('PATCH', `/tenants/invoice-settings/${id}/`, fd)
+
 // ── Plans ─────────────────────────────────────────────────────────────────────
 export const fetchPlans   = ()          => api.get('/billing/plans/')
 export const createPlan   = (data)      => api.post('/billing/plans/', data)

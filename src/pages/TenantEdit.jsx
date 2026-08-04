@@ -7,6 +7,7 @@ import {
   fetchTenant, updateTenant,
   fetchTenantPII, createTenantPII, updateTenantPII,
   fetchTenantBranding, createTenantBranding, updateTenantBranding,
+  fetchTenantInvoiceSettings, createTenantInvoiceSettings, updateTenantInvoiceSettings,
   fetchPlans, fetchTenantSubscriptions, createSubscription, updateSubscription,
   fetchModules, fetchTenantModules, createTenantModule, deleteTenantModule,
 } from '../utils/api.js'
@@ -495,6 +496,133 @@ function BrandingSection({ tenantId, tenantName }) {
   )
 }
 
+function InvoiceSettingsSection({ tenantId }) {
+  const [settings, setSettings] = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [qrFile, setQrFile]     = useState(null)
+  const [form, setForm] = useState({
+    account_holder_name: '', account_number: '', account_type: '',
+    ifsc_code: '', bank_name: '', branch_name: '', upi_id: '',
+    terms_and_conditions: '',
+    currency_symbol: '₹', advance_payment_percentage: '100', estimate_charge_percentage: '3',
+    replaced_parts_retention_days: '2', service_warranty_days: '30',
+  })
+  const { saving, saved, error, run } = useSaveState()
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  useEffect(() => {
+    if (!tenantId) return
+    fetchTenantInvoiceSettings(tenantId)
+      .then(d => {
+        const record = (d.results ?? [])[0] ?? null
+        setSettings(record)
+        if (record) setForm({
+          account_holder_name: record.account_holder_name ?? '',
+          account_number:      record.account_number_value ?? '',
+          account_type:        record.account_type ?? '',
+          ifsc_code:           record.ifsc_code ?? '',
+          bank_name:           record.bank_name ?? '',
+          branch_name:         record.branch_name ?? '',
+          upi_id:              record.upi_id ?? '',
+          terms_and_conditions: record.terms_and_conditions ?? '',
+          currency_symbol:     record.currency_symbol ?? '₹',
+          advance_payment_percentage:    record.advance_payment_percentage ?? '100',
+          estimate_charge_percentage:    record.estimate_charge_percentage ?? '3',
+          replaced_parts_retention_days: record.replaced_parts_retention_days ?? '2',
+          service_warranty_days:         record.service_warranty_days ?? '30',
+        })
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [tenantId])
+
+  const save = () => run(async () => {
+    const fd = new FormData()
+    fd.append('tenant', tenantId)
+    Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ''))
+    if (qrFile) fd.append('qr_code_file', qrFile)
+
+    if (settings?.id) {
+      const updated = await updateTenantInvoiceSettings(settings.id, fd)
+      setSettings(updated)
+    } else {
+      const created = await createTenantInvoiceSettings(fd)
+      setSettings(created)
+    }
+    setQrFile(null)
+  })
+
+  if (loading) return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+
+  return (
+    <SectionCard
+      title="Invoice Settings"
+      description="Bank details, UPI QR code, and terms & conditions printed on job card / invoice PDFs."
+      onSave={save} saving={saving} saved={saved} error={error}
+      saveLabel="Update Invoice Settings"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Bank Account Details</p>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Account Holder Name">
+          <input className={inp} value={form.account_holder_name} onChange={set('account_holder_name')} placeholder="German Werks" />
+        </Field>
+        <Field label="Account Number">
+          <input className={`${inp} font-mono`} value={form.account_number} onChange={set('account_number')} placeholder="05853 11111 11111" />
+        </Field>
+        <Field label="IFSC Code">
+          <input className={`${inp} font-mono uppercase`} value={form.ifsc_code} onChange={e => setForm(f => ({ ...f, ifsc_code: e.target.value.toUpperCase() }))} placeholder="TMBL0000058" />
+        </Field>
+        <Field label="Account Type">
+          <Select value={form.account_type} onChange={set('account_type')}>
+            <option value="">Select type</option>
+            <option value="savings">Savings</option>
+            <option value="current">Current</option>
+          </Select>
+        </Field>
+        <Field label="Bank Name">
+          <input className={inp} value={form.bank_name} onChange={set('bank_name')} placeholder="Tamilnadu Mercantile Bank" />
+        </Field>
+        <Field label="Branch">
+          <input className={inp} value={form.branch_name} onChange={set('branch_name')} placeholder="Podanur" />
+        </Field>
+        <Field label="UPI ID">
+          <input className={inp} value={form.upi_id} onChange={set('upi_id')} placeholder="germanwerks058@tmb" />
+        </Field>
+        <FileUpload label="UPI QR Code" hint="Square image, shown on invoice page 2"
+          file={qrFile} existingUrl={toProxiedUrl(settings?.qr_code_url)}
+          onChange={setQrFile} />
+      </div>
+
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 pt-2">Terms & Conditions Variables</p>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Currency Symbol">
+          <input className={inp} value={form.currency_symbol} onChange={set('currency_symbol')} placeholder="₹" maxLength={5} />
+        </Field>
+        <Field label="Advance Payment (%)">
+          <input type="number" min="0" max="100" step="0.01" className={inp} value={form.advance_payment_percentage} onChange={set('advance_payment_percentage')} placeholder="100" />
+        </Field>
+        <Field label="Estimate Charge (%)">
+          <input type="number" min="0" max="100" step="0.01" className={inp} value={form.estimate_charge_percentage} onChange={set('estimate_charge_percentage')} placeholder="3" />
+        </Field>
+        <Field label="Replaced Parts Retention (days)">
+          <input type="number" min="0" className={inp} value={form.replaced_parts_retention_days} onChange={set('replaced_parts_retention_days')} placeholder="2" />
+        </Field>
+        <Field label="Service Warranty (days)">
+          <input type="number" min="0" className={inp} value={form.service_warranty_days} onChange={set('service_warranty_days')} placeholder="30" />
+        </Field>
+      </div>
+
+      <Field
+        label="Terms & Conditions"
+        hint="Separate each clause with a blank line. Use {{tenant_name}}, {{advance_payment_percentage}}, {{estimate_charge_percentage}}, {{replaced_parts_retention_days}}, {{service_warranty_days}}, {{currency_symbol}} — they'll be substituted with the values above when the PDF is generated."
+      >
+        <textarea rows={10} className={`${inp} font-mono text-xs`} value={form.terms_and_conditions} onChange={set('terms_and_conditions')}
+          placeholder={'Pickup, drop-off, and test drives are undertaken at the customer’s own risk. {{tenant_name}} will exercise reasonable care…\n\nAn advance payment of {{advance_payment_percentage}}% of the quoted spare parts value must be paid before work commences.'} />
+      </Field>
+    </SectionCard>
+  )
+}
+
 function ModulesSection({ tenantId, allModules, loadingModules }) {
   const [assignments, setAssignments] = useState([])
   const [selected, setSelected]       = useState(new Set())
@@ -627,6 +755,7 @@ export default function TenantEdit() {
         <SubscriptionSection tenantId={id} plans={allPlans} loadingPlans={loadingPlans} />
         <OrganizationSection tenantId={id} />
         <BrandingSection tenantId={id} tenantName={tenant?.name} />
+        <InvoiceSettingsSection tenantId={id} />
         <ModulesSection tenantId={id} allModules={allModules} loadingModules={loadingModules} />
       </div>
     </Shell>
