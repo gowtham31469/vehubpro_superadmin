@@ -564,7 +564,7 @@ function InvoiceSettingsSection({ tenantId }) {
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Bank Account Details</p>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Account Holder Name">
-          <input className={inp} value={form.account_holder_name} onChange={set('account_holder_name')} placeholder="German Werks" />
+          <input className={inp} value={form.account_holder_name} onChange={set('account_holder_name')} placeholder="Account Holder Name" />
         </Field>
         <Field label="Account Number">
           <input className={`${inp} font-mono`} value={form.account_number} onChange={set('account_number')} placeholder="05853 11111 11111" />
@@ -586,7 +586,7 @@ function InvoiceSettingsSection({ tenantId }) {
           <input className={inp} value={form.branch_name} onChange={set('branch_name')} placeholder="Podanur" />
         </Field>
         <Field label="UPI ID">
-          <input className={inp} value={form.upi_id} onChange={set('upi_id')} placeholder="germanwerks058@tmb" />
+          <input className={inp} value={form.upi_id} onChange={set('upi_id')} placeholder="UPI ID" />
         </Field>
         <FileUpload label="UPI QR Code" hint="Square image, shown on invoice page 2"
           file={qrFile} existingUrl={toProxiedUrl(settings?.qr_code_url)}
