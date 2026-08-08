@@ -334,7 +334,7 @@ function SubscriptionSection({ tenantId, plans, loadingPlans }) {
 
 function OrganizationSection({ tenantId }) {
   const [pii, setPii]   = useState(null)
-  const [form, setForm] = useState({ contact_name: '', email: '', phone: '', address: '', gstin: '' })
+  const [form, setForm] = useState({ contact_name: '', email: '', phone: '', alternate_phone: '', address: '', gstin: '' })
   const [loading, setLoading] = useState(true)
   const { saving, saved, error, run } = useSaveState()
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -346,11 +346,12 @@ function OrganizationSection({ tenantId }) {
         const record = (d.results ?? [])[0] ?? null
         setPii(record)
         if (record) setForm({
-          contact_name: record.contact_name_value ?? '',
-          email:        record.email_value        ?? '',
-          phone:        record.phone_value        ?? '',
-          address:      record.address            ?? '',
-          gstin:        record.gstin_value        ?? '',
+          contact_name:    record.contact_name_value    ?? '',
+          email:           record.email_value           ?? '',
+          phone:           record.phone_value           ?? '',
+          alternate_phone: record.alternate_phone_value ?? '',
+          address:         record.address               ?? '',
+          gstin:           record.gstin_value           ?? '',
         })
       })
       .catch(() => {})
@@ -377,12 +378,15 @@ function OrganizationSection({ tenantId }) {
       <Field label="Contact Name" required>
         <input className={inp} value={form.contact_name} onChange={set('contact_name')} placeholder="John Doe" />
       </Field>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Field label="Email" required>
           <input type="email" className={inp} value={form.email} onChange={set('email')} placeholder="john@acme.com" />
         </Field>
         <Field label="Phone" required>
           <input className={inp} value={form.phone} onChange={set('phone')} placeholder="+91 98765 43210" />
+        </Field>
+        <Field label="Alternate Phone">
+          <input className={inp} value={form.alternate_phone} onChange={set('alternate_phone')} placeholder="+91 98765 43210" />
         </Field>
       </div>
       <Field label="Address" required>
