@@ -22,6 +22,7 @@ export default function Badge({ active, label, children, variant = 'status', cla
     slate: "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
     rose: "border-rose-200 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400",
     purple: "border-purple-200 dark:border-purple-500/20 bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400",
+    ghost: "border-slate-200 dark:border-white/10 bg-transparent text-slate-600 dark:text-slate-300",
   }
 
   return (
