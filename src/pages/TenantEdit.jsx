@@ -412,6 +412,9 @@ function BrandingSection({ tenantId, tenantName }) {
   const [darkLogoFile, setDarkLogoFile] = useState(null)
   const [faviconFile, setFaviconFile]   = useState(null)
   const [color, setColor] = useState(PURPLE)
+  const [instagramHandle, setInstagramHandle] = useState('')
+  const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [businessHours, setBusinessHours] = useState('')
   const { saving, saved, error, run } = useSaveState()
   const PRESETS = [PURPLE,'#C82909','#059669','#7c3aed','#0891b2','#d97706','#374151','#000000']
 
@@ -422,6 +425,9 @@ function BrandingSection({ tenantId, tenantName }) {
         const record = (d.results ?? [])[0] ?? null
         setBranding(record)
         if (record?.primary_color) setColor(record.primary_color)
+        setInstagramHandle(record?.instagram_handle || '')
+        setWhatsappNumber(record?.whatsapp_number || '')
+        setBusinessHours(record?.business_hours || '')
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -431,6 +437,9 @@ function BrandingSection({ tenantId, tenantName }) {
     const fd = new FormData()
     fd.append('tenant', tenantId)
     fd.append('primary_color', color)
+    fd.append('instagram_handle', instagramHandle.trim())
+    fd.append('whatsapp_number', whatsappNumber.trim())
+    fd.append('business_hours', businessHours.trim())
     if (logoFile)     fd.append('logo_file',      logoFile)
     if (darkLogoFile) fd.append('dark_logo_file', darkLogoFile)
     if (faviconFile)  fd.append('favicon_file',   faviconFile)
@@ -482,6 +491,18 @@ function BrandingSection({ tenantId, tenantName }) {
           </div>
         </div>
       </Field>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Field label="Instagram Handle" hint="Without the @ — shown as a QR code on the public landing page.">
+          <input className={inp} value={instagramHandle} onChange={e => setInstagramHandle(e.target.value.replace(/^@/, ''))} placeholder="chezhiyancars" />
+        </Field>
+        <Field label="WhatsApp Number" hint="Digits with country code, e.g. 919840012345.">
+          <input className={inp} value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value.replace(/[^\d]/g, ''))} placeholder="919840012345" />
+        </Field>
+        <Field label="Business Hours" hint="Free text, e.g. Mon - Sun · 9AM - 8PM.">
+          <input className={inp} value={businessHours} onChange={e => setBusinessHours(e.target.value)} placeholder="Mon - Sun · 9AM - 8PM" />
+        </Field>
+      </div>
 
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Preview</p>
